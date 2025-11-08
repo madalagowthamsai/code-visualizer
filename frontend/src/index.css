@@ -1,0 +1,71 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  margin: 0;
+  padding: 0;
+}
+
+.app-container {
+  padding: 20px;
+  max-width: 960px;
+  margin: auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+input[type='file'] {
+  display: block;
+  margin: 10px auto 20px auto;
+}
+
+.go-back-button {
+  background-color: #007acc;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.go-back-button:hover {
+  background-color: #005fa3;
+}
+
+.folder-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.folder-box {
+  border: 1px solid #555;
+  background-color: #ddd;
+  padding: 12px 20px;
+  min-width: 160px;
+  max-width: 180px;
+  text-align: center;
+  border-radius: 6px;
+  user-select: none;
+  cursor: default;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s;
+}
+
+.folder-box.folder {
+  background-color: #cde6f7;
+  cursor: pointer;
+}
+
+.folder-box.folder:hover {
+  background-color: #a4c8e7;
+}
+
+.folder-box.file {
+  background-color: #f7e3cd;
+  cursor: default;
+}
