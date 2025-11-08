@@ -4,11 +4,11 @@ import ReactFlow, {
   Controls,
   Background,
   useNodesState,
-  useEdgesState
+  useEdgesState,
+  addEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-// Recursively find node by ID (used for drill-down)
 function findNodeByPath(node, pathArr) {
   if (!node || !pathArr.length) return null;
   if (pathArr[0] !== node.name) return null;
@@ -21,16 +21,16 @@ function findNodeByPath(node, pathArr) {
   return null;
 }
 
-// Create nodes and edges for all immediate children of a folder node.
-function buildNodesEdgesForFolder(folderNode, parentPathArr = []) {
+function buildNodesEdges(folderNode, currentPath, importEdges) {
   const nodes = [];
   const edges = [];
-  if (!folderNode || !folderNode.children) return { nodes, edges };
-  const parentId =
-    parentPathArr.length > 0 ? parentPathArr.join('/') : folderNode.name;
 
-  // Add parent folder node (except at root)
-  if (parentPathArr.length > 0) {
+  if (!folderNode || !folderNode.children) return { nodes, edges };
+
+  const parentId = currentPath.join('/');
+
+  // Parent folder node (except top/root)
+  if (currentPath.length > 1) {
     nodes.push({
       id: parentId,
       data: { label: folderNode.name, isFolder: true },
@@ -38,34 +38,51 @@ function buildNodesEdgesForFolder(folderNode, parentPathArr = []) {
       style: {
         backgroundColor: '#b2f7ef',
         border: '2px solid #222',
-        fontWeight: 'bold'
-      }
+        fontWeight: 'bold',
+        cursor: 'pointer',
+      },
     });
   }
 
-  // Place children nodes horizontally
   folderNode.children.forEach((child, idx) => {
-    const isFolder = !!(child.children && child.children.length > 0);
-    const id = [...parentPathArr, child.name].join('/');
+    const isFolder = child.children && child.children.length > 0;
+    const nodeId = [...currentPath, child.name].join('/');
     nodes.push({
-      id,
+      id: nodeId,
       data: { label: child.name, isFolder },
-      position: {
-        x: 300, // always to the right of parent
-        y: 50 + idx * 100
-      },
+      position: { x: 300, y: 50 + idx * 100 },
       style: {
         backgroundColor: isFolder ? '#70a1d7' : '#ffe082',
         border: '1.5px solid #111',
-        fontWeight: isFolder ? 'bold' : 'normal'
-      }
+        fontWeight: isFolder ? 'bold' : 'normal',
+        cursor: 'pointer',
+      },
     });
-    if (parentPathArr.length > 0) {
+    if (currentPath.length > 1) {
       edges.push({
-        id: `${parentId}->${id}`,
+        id: `containment-${parentId}->${nodeId}`,
         source: parentId,
-        target: id,
-        animated: true
+        target: nodeId,
+        animated: true,
+        style: { stroke: '#888' },
+      });
+    }
+  });
+
+  // Filter importEdges relevant for nodes visible in this folder
+  const visibleIds = new Set(nodes.map((n) => n.id));
+  importEdges.forEach((edge, i) => {
+    // Normalize edge source/target paths to id format (assuming '/' separator)
+    const sourceId = edge.source;
+    const targetId = edge.target;
+    if (visibleIds.has(sourceId) && visibleIds.has(targetId)) {
+      edges.push({
+        id: `import-${i}`,
+        source: sourceId,
+        target: targetId,
+        animated: true,
+        style: { stroke: 'red', strokeWidth: 2 },
+        label: 'import',
       });
     }
   });
@@ -75,80 +92,145 @@ function buildNodesEdgesForFolder(folderNode, parentPathArr = []) {
 
 export default function App() {
   const [treeData, setTreeData] = useState(null);
-  const [currentPath, setCurrentPath] = useState([]); // e.g. ['root','folder','subfolder']
+  const [importEdges, setImportEdges] = useState([]);
+  const [currentPath, setCurrentPath] = useState([]);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [fileContent, setFileContent] = useState('');
+  const [showFileContent, setShowFileContent] = useState(false);
+  const [fileName, setFileName] = useState('');
 
-  // Upload ZIP, receive folder tree JSON
   const uploadZip = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append('repoZip', file);
+    const fd = new FormData();
+    fd.append('repoZip', file);
     try {
       const res = await fetch('http://localhost:5000/upload', {
         method: 'POST',
-        body: formData
+        body: fd,
       });
       if (res.ok) {
-        const data = await res.json();
-        setTreeData(data);
-        setCurrentPath([data.name]); // e.g. ['root'] or ['Demo-Project']
+        const { tree, edges } = await res.json();
+        setTreeData(tree);
+        setImportEdges(edges);
+        setCurrentPath([tree.name]);
+        setFileContent('');
+        setShowFileContent(false);
       } else {
-        alert('Failed to upload zip file');
+        alert('Upload failed');
       }
-    } catch {
-      alert('Error uploading file');
+    } catch (error) {
+      alert('Upload error');
     }
   };
 
-  // Whenever current folder changes, update visible nodes/edges
   useEffect(() => {
     if (!treeData || !currentPath.length) {
       setNodes([]);
       setEdges([]);
+      setFileContent('');
+      setShowFileContent(false);
       return;
     }
-    const folderNode = findNodeByPath(treeData, currentPath);
-    const { nodes, edges } = buildNodesEdgesForFolder(folderNode, currentPath);
-    setNodes(nodes);
-    setEdges(edges);
-  }, [treeData, currentPath, setNodes, setEdges]);
+    const folder = findNodeByPath(treeData, currentPath);
+    if (!folder) {
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
+    const data = buildNodesEdges(folder, currentPath, importEdges);
+    setNodes(data.nodes);
+    setEdges(data.edges);
+  }, [treeData, currentPath, importEdges, setNodes, setEdges]);
 
-  // Double click to drill down into folders with children
-  const handleNodeClick = useCallback(
-    (event, node) => {
-      if (event.detail === 2 && node.data.isFolder) {
-        setCurrentPath([...currentPath, node.data.label]);
+  const onNodeClick = useCallback(
+    async (event, node) => {
+      if (event.detail === 2) {
+        if (!node.data.isFolder) {
+          // File double-click: load content
+          setFileName(node.id);
+          try {
+            const res = await fetch('http://localhost:5000/file-content', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: node.id }),
+            });
+            const json = await res.json();
+            if (json.content) {
+              setFileContent(json.content);
+              setShowFileContent(true);
+            } else {
+              setFileContent('Unable to load file content.');
+              setShowFileContent(true);
+            }
+          } catch {
+            setFileContent('Error loading file content.');
+            setShowFileContent(true);
+          }
+        } else {
+          // Folder double-click: drill down
+          setCurrentPath([...currentPath, node.data.label]);
+          setShowFileContent(false);
+          setFileContent('');
+        }
       }
     },
     [currentPath]
   );
 
   const goBack = () => {
-    if (currentPath.length > 1) setCurrentPath(currentPath.slice(0, -1));
+    if (currentPath.length > 1) {
+      setCurrentPath(currentPath.slice(0, -1));
+      setShowFileContent(false);
+      setFileContent('');
+    }
   };
 
   return (
-    <div style={{ height: '100vh', width: '100vw', padding: 20, boxSizing: 'border-box' }}>
-      <h1>Repository Folder Drill Down Visualizer</h1>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', padding: 10 }}>
+      <h1>Code Repo Visualizer with Import Relations</h1>
       <input type="file" accept=".zip" onChange={uploadZip} disabled={!!treeData} />
       {currentPath.length > 1 && (
-        <button onClick={goBack} style={{ margin: 10 }}>&larr; Back</button>
+        <button onClick={goBack} style={{ margin: '10px' }}>
+          &larr; Back
+        </button>
       )}
-      <div style={{ height: '80%', border: '1px solid #ccc' }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onNodeClick={handleNodeClick}
-          fitView
-        >
-          <MiniMap />
-          <Controls />
-          <Background />
-        </ReactFlow>
+      <div style={{ flex: 1, display: 'flex', border: '1px solid #ccc' }}>
+        <div style={{ width: showFileContent ? '60%' : '100%', height: '100%' }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            fitView
+          >
+            <MiniMap />
+            <Controls />
+            <Background />
+          </ReactFlow>
+        </div>
+        {showFileContent && (
+          <pre
+            style={{
+              width: '40%',
+              height: '100%',
+              margin: 0,
+              padding: 20,
+              overflow: 'auto',
+              backgroundColor: '#f4f4f4',
+              borderLeft: '1px solid #ccc',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordWrap: 'break-word',
+            }}
+          >
+            <strong>{fileName}</strong>
+            <br />
+            {fileContent}
+          </pre>
+        )}
       </div>
     </div>
   );
