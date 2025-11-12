@@ -1,0 +1,343 @@
+{
+    "file1": {
+        "depends": [
+            "accounts",
+            "customers"
+        ],
+        "left_join": [
+            {
+                "table": [
+                    "customers",
+                    "accounts"
+                ],
+                "column": "customer_id"
+            }
+        ],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {
+            "customers": [
+                "credit_score",
+                "customer_id",
+                "customer_name",
+                "status"
+            ],
+            "accounts": [
+                "account_id",
+                "current_balance",
+                "customer_id"
+            ]
+        }
+    },
+    "file2": {
+        "depends": [
+            "branches",
+            "file1",
+            "transactions"
+        ],
+        "left_join": [
+            {
+                "table": [
+                    "transactions",
+                    "branches"
+                ],
+                "column": "branch_id"
+            }
+        ],
+        "right_join": [],
+        "inner_join": [
+            {
+                "table": [
+                    "file1",
+                    "transactions"
+                ],
+                "column": "customer_id"
+            }
+        ],
+        "columns": {
+            "file1": [
+                "credit_score",
+                "customer_id",
+                "customer_name",
+                "total_balance"
+            ],
+            "transactions": [
+                "amount",
+                "branch_id",
+                "customer_id",
+                "transaction_date",
+                "transaction_id",
+                "transaction_type"
+            ],
+            "branches": [
+                "branch_id",
+                "branch_name"
+            ]
+        }
+    },
+    "file3": {
+        "depends": [
+            "file1",
+            "file2",
+            "loan_applications",
+            "risk_assessments"
+        ],
+        "left_join": [
+            {
+                "table": [
+                    "file1",
+                    "file2"
+                ],
+                "column": "customer_id"
+            },
+            {
+                "table": [
+                    "file1",
+                    "loan_applications"
+                ],
+                "column": "customer_id"
+            }
+        ],
+        "right_join": [],
+        "inner_join": [
+            {
+                "table": [
+                    "file1",
+                    "risk_assessments"
+                ],
+                "column": "customer_id"
+            }
+        ],
+        "columns": {
+            "file1": [
+                "credit_score",
+                "customer_id",
+                "customer_name",
+                "total_balance"
+            ],
+            "risk_assessments": [
+                "customer_id",
+                "risk_category",
+                "risk_score"
+            ],
+            "loan_applications": [
+                "customer_id",
+                "interest_rate",
+                "loan_amount"
+            ],
+            "file2": [
+                "amount",
+                "customer_id",
+                "transaction_id"
+            ]
+        }
+    },
+    "file4": {
+        "depends": [
+            "alert_logs",
+            "compliance_checks",
+            "file2",
+            "file3"
+        ],
+        "left_join": [
+            {
+                "table": [
+                    "file3",
+                    "compliance_checks"
+                ],
+                "column": "customer_id"
+            },
+            {
+                "table": [
+                    "file2",
+                    "alert_logs"
+                ],
+                "column": "transaction_id"
+            }
+        ],
+        "right_join": [],
+        "inner_join": [
+            {
+                "table": [
+                    "file3",
+                    "file2"
+                ],
+                "column": "customer_id"
+            }
+        ],
+        "columns": {
+            "file3": [
+                "customer_id",
+                "customer_name",
+                "risk_category",
+                "total_balance"
+            ],
+            "file2": [
+                "amount",
+                "branch_name",
+                "customer_id",
+                "transaction_id",
+                "transaction_type"
+            ],
+            "compliance_checks": [
+                "compliance_status",
+                "customer_id"
+            ],
+            "alert_logs": [
+                "alert_type",
+                "transaction_id"
+            ],
+            "k": [
+                "kyc_review_date"
+            ]
+        }
+    },
+    "file5": {
+        "depends": [
+            "credit_ratings",
+            "file1",
+            "file2",
+            "file3",
+            "file4",
+            "investment_portfolios"
+        ],
+        "left_join": [
+            {
+                "table": [
+                    "file1",
+                    "file3"
+                ],
+                "column": "customer_id"
+            },
+            {
+                "table": [
+                    "file1",
+                    "file4"
+                ],
+                "column": "customer_id"
+            },
+            {
+                "table": [
+                    "file1",
+                    "investment_portfolios"
+                ],
+                "column": "customer_id"
+            },
+            {
+                "table": [
+                    "file1",
+                    "credit_ratings"
+                ],
+                "column": "customer_id"
+            }
+        ],
+        "right_join": [],
+        "inner_join": [
+            {
+                "table": [
+                    "file1",
+                    "f2"
+                ],
+                "column": "customer_id"
+            }
+        ],
+        "columns": {
+            "file1": [
+                "credit_score",
+                "customer_id",
+                "customer_name",
+                "total_balance"
+            ],
+            "f2": [
+                "avg_high_value_txn",
+                "customer_id"
+            ],
+            "file3": [
+                "customer_id",
+                "risk_category"
+            ],
+            "file4": [
+                "compliance_status",
+                "customer_id"
+            ],
+            "investment_portfolios": [
+                "customer_id",
+                "portfolio_value"
+            ],
+            "credit_ratings": [
+                "customer_id",
+                "investment_grade"
+            ]
+        }
+    },
+    "accounts": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "alert_logs": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "branches": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "compliance_checks": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "credit_ratings": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "customers": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "investment_portfolios": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "loan_applications": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "risk_assessments": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    },
+    "transactions": {
+        "depends": [],
+        "left_join": [],
+        "right_join": [],
+        "inner_join": [],
+        "columns": {}
+    }
+}
