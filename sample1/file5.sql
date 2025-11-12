@@ -16,7 +16,7 @@ INNER JOIN (
     GROUP BY customer_id
 ) f2 ON f1.customer_id = f2.customer_id
 LEFT JOIN investment_portfolios p ON f1.customer_id = p.customer_id
-RIGHT JOIN credit_ratings i ON f1.customer_id = i.customer_id(+)
+RIGHT JOIN credit_ratings i ON f1.customer_id = i.customer_id
 WHERE f1.total_balance > 25000
 AND (f3.risk_category != 'HIGH' OR f3.risk_category IS NULL)
 ORDER BY f1.total_balance DESC

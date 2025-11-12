@@ -222,7 +222,9 @@
                     "investment_portfolios"
                 ],
                 "column": "customer_id"
-            },
+            }
+        ],
+        "right_join": [
             {
                 "table": [
                     "file1",
@@ -231,7 +233,6 @@
                 "column": "customer_id"
             }
         ],
-        "right_join": [],
         "inner_join": [
             {
                 "table": [
